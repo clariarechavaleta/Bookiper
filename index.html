@@ -1039,7 +1039,7 @@
 // ============================================================
 // CONFIG — apunta al Cloudflare Worker
 // ============================================================
-const WORKER_URL = 'https://bookiper-worker.YOUR_SUBDOMAIN.workers.dev';
+const WORKER_URL = 'https://bookiper-worker.clariarechavaleta.workers.dev';
 
 // ============================================================
 // ESTADO GLOBAL
@@ -1364,19 +1364,109 @@ async function ejecutarPipeline(desdeDrive = false) {
 // LLAMADA AL WORKER
 // ============================================================
 async function llamarWorker(accion, payload) {
-  // En producción: llamar a WORKER_URL
-  // Como el Worker no está configurado aún, usamos Anthropic directamente
-  // con la key del usuario (modo desarrollo)
-  const apiKey = obtenerApiKey();
-  if (!apiKey) throw new Error('API key no configurada');
-
+  // Construir el payload para Anthropic según la acción
+  let anthropicPayload;
   if (accion === 'extract') {
-    return await extraerConIA(payload, apiKey);
+    anthropicPayload = buildExtractPayload(payload);
   } else if (accion === 'classify') {
-    return await clasificarConIA(payload, apiKey);
+    anthropicPayload = buildClassifyPayload(payload);
   } else if (accion === 'reconcile') {
-    return await conciliarConIA(payload, apiKey);
+    anthropicPayload = buildReconcilePayload(payload);
   }
+
+  // Llamar al Cloudflare Worker — la API key nunca sale del servidor
+  const res = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accion, payload: anthropicPayload })
+  });
+
+  if (!res.ok) throw new Error(`Worker error ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+
+  // Parsear la respuesta de Anthropic
+  const text = data.content[0].text;
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('Respuesta no parseeable');
+  return JSON.parse(match[0]);
+}
+
+function buildExtractPayload(payload) {
+  const prompt = `Sos el Agente Extractor de Bookiper, un sistema contable para PyMEs uruguayas.
+Analizá el comprobante y extraé los datos en JSON exacto, sin texto adicional:
+{
+  "fecha": "DD/MM/YYYY",
+  "proveedor": "nombre del comercio",
+  "rut": "RUT uruguayo si aparece",
+  "monto": número sin símbolos,
+  "moneda": "UYU" o "USD",
+  "tipo": "ticket" | "factura" | "recibo",
+  "descripcion": "qué se compró en pocas palabras",
+  "notas": "información adicional relevante",
+  "confianza": { "fecha": 0.0-1.0, "proveedor": 0.0-1.0, "monto": 0.0-1.0 }
+}
+Si algo no está claro, ponelo en notas. Confianza 1.0 = certeza total.`;
+
+  const content = payload.imagen ? [
+    { type: 'image', source: { type: 'base64', media_type: payload.tipo || 'image/jpeg', data: payload.imagen } },
+    { type: 'text', text: prompt }
+  ] : [{ type: 'text', text: prompt + `\n\nArchivo: ${payload.nombre || 'comprobante'}` }];
+
+  return { model: 'claude-sonnet-4-6', max_tokens: 800, messages: [{ role: 'user', content }] };
+}
+
+function buildClassifyPayload(payload) {
+  const ext = payload.extraccion;
+  const prompt = `Sos el Agente Clasificador de Bookiper para PyMEs uruguayas.
+Clasificá este gasto en categoría contable. Contexto uruguayo:
+- Combustible: ANCAP, Axion, Shell, Petrobras
+- Representación: restaurantes, cafés (Jardín Café, Café Britt)
+- Viáticos: Uber, taxi, transporte
+- Insumos de oficina: Tienda Inglesa, librería, supermercado
+- Software: Uruware, Microsoft, Google
+- Servicios: UTE, Antel, OSE
+
+Datos del comprobante:
+Proveedor: ${ext.proveedor || '?'}
+Monto: ${ext.moneda || 'UYU'} ${ext.monto || '?'}
+Descripción: ${ext.descripcion || '?'}
+Tipo: ${ext.tipo || '?'}
+
+Respondé SOLO con JSON:
+{
+  "categoria": "categoría principal",
+  "subcategoria": "subcategoría específica",
+  "confianza": 0.0-1.0,
+  "estado": "aprobado" | "revision" | "escalado",
+  "justificacion": "por qué esta categoría",
+  "alternativa": "otra categoría posible o null"
+}
+Estado: aprobado si confianza >= 0.80, revision si 0.60-0.79, escalado si < 0.60`;
+
+  return { model: 'claude-haiku-4-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] };
+}
+
+function buildReconcilePayload(payload) {
+  const prompt = `Sos el Agente Reconciliador de Bookiper para PyMEs uruguayas.
+Cruzá estos comprobantes contra el extracto bancario Itaú Uruguay.
+
+COMPROBANTES:
+${JSON.stringify(payload.comprobantes.map(c => ({
+  proveedor: c.extraccion?.proveedor,
+  monto: c.extraccion?.monto,
+  fecha: c.extraccion?.fecha
+})), null, 2)}
+
+EXTRACTO: ${payload.extracto}
+
+Respondé SOLO con JSON:
+{
+  "resultados": [{ "comprobante": "proveedor", "monto": número, "movimiento_banco": "texto o null", "monto_banco": número o null, "estado": "match_exacto"|"match_monto"|"sin_match", "justificacion": "por qué" }],
+  "resumen": { "match_exacto": N, "match_monto": N, "sin_match": N }
+}`;
+
+  return { model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] };
 }
 
 function obtenerApiKey() {
