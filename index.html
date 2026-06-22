@@ -1469,167 +1469,6 @@ Respondé SOLO con JSON:
   return { model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] };
 }
 
-function obtenerApiKey() {
-  let key = localStorage.getItem('bookiper_apikey');
-  if (!key) {
-    key = prompt('Ingresá tu API Key de Anthropic para continuar:\n(Se guarda en tu navegador, no se envía a ningún servidor)');
-    if (key) localStorage.setItem('bookiper_apikey', key);
-  }
-  return key;
-}
-
-// ============================================================
-// AGENTES IA
-// ============================================================
-async function extraerConIA(payload, apiKey) {
-  const prompt = `Sos el Agente Extractor de Bookiper, un sistema contable para PyMEs uruguayas.
-Analizá el comprobante y extraé los datos en JSON exacto, sin texto adicional:
-{
-  "fecha": "DD/MM/YYYY",
-  "proveedor": "nombre del comercio",
-  "rut": "RUT uruguayo si aparece",
-  "monto": número sin símbolos,
-  "moneda": "UYU" o "USD",
-  "tipo": "ticket" | "factura" | "recibo",
-  "descripcion": "qué se compró en pocas palabras",
-  "notas": "información adicional relevante",
-  "confianza": { "fecha": 0.0-1.0, "proveedor": 0.0-1.0, "monto": 0.0-1.0 }
-}
-Si algo no está claro, ponelo en notas. Confianza 1.0 = certeza total.`;
-
-  const content = payload.imagen ? [
-    { type: 'image', source: { type: 'base64', media_type: payload.tipo || 'image/jpeg', data: payload.imagen } },
-    { type: 'text', text: prompt }
-  ] : [{ type: 'text', text: prompt + `\n\nArchivo: ${payload.nombre || 'comprobante'}` }];
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 800,
-      messages: [{ role: 'user', content }]
-    })
-  });
-
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const data = await res.json();
-  const text = data.content[0].text;
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('Respuesta no parseeable');
-  return JSON.parse(match[0]);
-}
-
-async function clasificarConIA(payload, apiKey) {
-  const ext = payload.extraccion;
-  const prompt = `Sos el Agente Clasificador de Bookiper para PyMEs uruguayas.
-Clasificá este gasto en categoría contable. Contexto uruguayo:
-- Combustible: ANCAP, Axion, Shell, Petrobras
-- Representación: restaurantes, cafés (Jardín Café, Café Britt)
-- Viáticos: Uber, taxi, transporte
-- Insumos de oficina: Tienda Inglesa, librería, supermercado
-- Software: Uruware, Microsoft, Google
-- Servicios: UTE, Antel, OSE
-
-Datos del comprobante:
-Proveedor: ${ext.proveedor || '?'}
-Monto: ${ext.moneda || 'UYU'} ${ext.monto || '?'}
-Descripción: ${ext.descripcion || '?'}
-Tipo: ${ext.tipo || '?'}
-
-Respondé SOLO con JSON:
-{
-  "categoria": "categoría principal",
-  "subcategoria": "subcategoría específica",
-  "confianza": 0.0-1.0,
-  "estado": "aprobado" | "revision" | "escalado",
-  "justificacion": "por qué esta categoría",
-  "alternativa": "otra categoría posible o null"
-}
-Estado: aprobado si confianza >= 0.80, revision si 0.60-0.79, escalado si < 0.60`;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5',
-      max_tokens: 400,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const data = await res.json();
-  const text = data.content[0].text;
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('Respuesta no parseeable');
-  return JSON.parse(match[0]);
-}
-
-async function conciliarConIA(payload, apiKey) {
-  const prompt = `Sos el Agente Reconciliador de Bookiper para PyMEs uruguayas.
-Cruzá estos comprobantes contra el extracto bancario Itaú Uruguay.
-El banco abrevia nombres de proveedores — hacé matching por monto y fecha aproximada.
-
-COMPROBANTES:
-${JSON.stringify(payload.comprobantes.map(c => ({
-  proveedor: c.extraccion?.proveedor,
-  monto: c.extraccion?.monto,
-  fecha: c.extraccion?.fecha,
-  moneda: c.extraccion?.moneda
-})), null, 2)}
-
-EXTRACTO BANCARIO (texto):
-${payload.extracto}
-
-Respondé SOLO con JSON:
-{
-  "resultados": [
-    {
-      "comprobante": "nombre proveedor",
-      "monto": número,
-      "movimiento_banco": "texto del banco o null",
-      "monto_banco": número o null,
-      "estado": "match_exacto" | "match_monto" | "sin_match",
-      "justificacion": "por qué"
-    }
-  ],
-  "resumen": { "match_exacto": N, "match_monto": N, "sin_match": N }
-}`;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const data = await res.json();
-  const text = data.content[0].text;
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('Respuesta no parseeable');
-  return JSON.parse(match[0]);
-}
-
 // ============================================================
 // SUPABASE (logging)
 // ============================================================
@@ -1748,15 +1587,13 @@ async function procesarConciliacion() {
   setPipelineStep('conciliacion', 'active');
 
   try {
-    const apiKey = obtenerApiKey();
     // Decodificar el PDF para extraer texto (simplificado)
-    const extractoTexto = `EXTRACTO CUENTA CORRIENTE ITAÚ URUGUAY\n[PDF cargado - ${state.bancoArchivo?.name}]\nEn producción se extraería el texto completo del PDF`;
+const extractoTexto = `EXTRACTO CUENTA CORRIENTE ITAÚ URUGUAY\n[PDF cargado - ${state.bancoArchivo?.name}]\nEn producción se extraería el texto completo del PDF`;
 
-    const result = await conciliarConIA({
-      comprobantes: state.comprobantes,
-      extracto: extractoTexto
-    }, apiKey);
-
+const result = await llamarWorker('reconcile', {
+  comprobantes: state.comprobantes,
+  extracto: extractoTexto
+});
     setPipelineStep('conciliacion', 'done');
     mostrarConciliacion(result);
     log(`Reconciliador: ${result.resumen?.match_exacto || 0} match exacto, ${result.resumen?.sin_match || 0} sin match`, 'success');
