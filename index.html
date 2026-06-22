@@ -1114,17 +1114,7 @@ function resetPipeline() {
 // AUTH GOOGLE
 // ============================================================
 function iniciarGoogleAuth() {
-  // En producción: redirigir al Worker para OAuth
-  // Por ahora simulamos el flujo para la demo
-  const email = prompt('Demo: ingresá tu email para simular el login con Google');
-  if (!email) return;
-  const nombre = email.split('@')[0];
-  state.user = { email, nombre };
-  state.googleToken = 'demo-token-' + Date.now();
-  actualizarAuthUI();
-  log(`Usuario autenticado: ${email}`, 'success');
-  toast('✓ Sesión iniciada correctamente');
-  cargarDrive();
+  window.location.href = 'https://bookiper-worker.clariarechavaleta.workers.dev/auth/google';
 }
 
 function actualizarAuthUI() {
@@ -1728,6 +1718,23 @@ window.onload = () => {
   log('Bookiper iniciado · sistema agéntico contable v2.0', 'success');
   log('Backend: Cloudflare Worker · DB: Supabase · Auth: Google OAuth', 'info');
   actualizarMonitoreo();
+
+  // Verificar si volvemos del callback de Google OAuth
+  const params = new URLSearchParams(window.location.search);
+  const email = params.get('email');
+  const nombre = params.get('nombre');
+  const token = params.get('token');
+
+  if (email && token) {
+    state.user = { email, nombre };
+    state.googleToken = token;
+    actualizarAuthUI();
+    log(`Usuario autenticado: ${email}`, 'success');
+    toast('✓ Sesión iniciada con Google');
+    cargarDrive();
+    // Limpiar los parámetros de la URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 };
 </script>
 </body>
