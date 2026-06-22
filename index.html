@@ -1473,21 +1473,11 @@ Respondé SOLO con JSON:
 // SUPABASE (logging)
 // ============================================================
 async function guardarEnSupabase(comp) {
-  const SUPABASE_URL = 'https://rlalleedsqihwjsstcmm.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_umRlgD-JPYduTEMZf393Sg_uSl4OBnL';
-  if (SUPABASE_URL.includes('YOUR')) {
-    document.getElementById('statusSupabase').textContent = 'No configurado (pendiente deploy)';
-    return;
-  }
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/comprobantes`, {
+    await fetch(WORKER_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      },
-      body: JSON.stringify({
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accion: 'guardar', payload: {
         proveedor: comp.extraccion?.proveedor,
         monto: comp.extraccion?.monto,
         moneda: comp.extraccion?.moneda,
@@ -1496,7 +1486,7 @@ async function guardarEnSupabase(comp) {
         latencia: parseFloat(comp.latencia),
         usuario: state.user?.email,
         timestamp: comp.timestamp
-      })
+      }})
     });
     document.getElementById('statusSupabase').textContent = 'Conectada · datos guardados';
     document.getElementById('dotSupabase').style.background = 'var(--verde-medio)';
