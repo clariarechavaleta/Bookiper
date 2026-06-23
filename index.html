@@ -1136,9 +1136,38 @@ function actualizarAuthUI() {
       </div>`;
     document.getElementById('statusDrive').textContent = `Conectado como ${state.user.email}`;
     document.getElementById('dotDrive').style.background = 'var(--verde-medio)';
+    cargarComprobantesGuardados();
   }
 }
+async function cargarComprobantesGuardados() {
+  try {
+    const res = await fetch(`${WORKER_URL}/comprobantes?usuario=${encodeURIComponent(state.user.email)}`);
+    const data = await res.json();
+    if (!data.length) return;
 
+    data.forEach(c => {
+      const yaExiste = state.comprobantes.find(x => x.timestamp === c.timestamp && x.extraccion?.proveedor === c.proveedor);
+      if (!yaExiste) {
+        state.comprobantes.push({
+          id: c.id,
+          nombre: c.proveedor || 'Comprobante',
+          extraccion: { proveedor: c.proveedor, monto: c.monto, moneda: c.moneda },
+          clasificacion: { categoria: c.categoria, estado: c.estado },
+          latencia: c.latencia,
+          timestamp: c.timestamp
+        });
+      }
+    });
+
+    actualizarChips();
+    actualizarMonitoreo();
+    actualizarReporte();
+    log(`${data.length} comprobantes recuperados de sesiones anteriores`, 'success');
+  } catch(e) {
+    log('Error recuperando comprobantes: ' + e.message, 'warn');
+  }
+}
+  
 function cerrarSesion() {
   state.user = null;
   state.googleToken = null;
