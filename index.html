@@ -1726,21 +1726,19 @@ window.onload = () => {
   actualizarMonitoreo();
 
   // Verificar si volvemos del callback de Google OAuth
-  const params = new URLSearchParams(window.location.search);
-  const email = params.get('email');
-  const nombre = params.get('nombre');
-  const token = params.get('token');
+  const sessionCookie = document.cookie
+  .split('; ')
+  .find(r => r.startsWith('session='));
 
-  if (email && token) {
-    state.user = { email, nombre };
-    state.googleToken = token;
-    actualizarAuthUI();
-    log(`Usuario autenticado correctamente`, 'success');
-    toast('✓ Sesión iniciada con Google');
-    cargarDrive();
-    // Limpiar los parámetros de la URL
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
+if (sessionCookie) {
+  const sessionData = JSON.parse(decodeURIComponent(sessionCookie.split('=')[1]));
+  state.user = { email: sessionData.email, nombre: sessionData.nombre };
+  actualizarAuthUI();
+  log('Usuario autenticado correctamente', 'success');
+  toast('✓ Sesión iniciada con Google');
+  cargarDrive();
+}
+
 };
 </script>
 </body>
