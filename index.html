@@ -1660,11 +1660,10 @@ async function procesarConciliacion() {
 
   try {
     // Decodificar el PDF para extraer texto (simplificado)
-const extractoTexto = `EXTRACTO CUENTA CORRIENTE ITAÚ URUGUAY\n[PDF cargado - ${state.bancoArchivo?.name}]\nEn producción se extraería el texto completo del PDF`;
-
 const result = await llamarWorker('reconcile', {
   comprobantes: state.comprobantes,
-  extracto: extractoTexto
+  extractoPDF: state.bancoBase64,
+  extractoNombre: state.bancoArchivo?.name
 });
     setPipelineStep('conciliacion', 'done');
     mostrarConciliacion(result);
