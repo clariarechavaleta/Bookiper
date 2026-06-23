@@ -1205,18 +1205,34 @@ function refreshDrive() {
   setTimeout(cargarDrive, 800);
 }
 
-async function procesarDesdeDrive(id, nombre) {
-  log(`Drive: procesando ${nombre}`, 'info');
-  toast(`Procesando ${nombre} desde Drive...`);
+async function procesarDesdeDrive(id, nombre, mimeType) {
+  log(`Drive: descargando ${nombre}...`, 'info');
+  toast(`Descargando ${nombre} desde Drive...`);
   switchMainTab('comprobantes', document.querySelector('.main-tab'));
-  // En producción: el Worker descarga el archivo de Drive y lo procesa
-  // Demo: usamos imagen placeholder
-  state.archivoActual = nombre;
-  state.archivoTipo = 'image/jpeg';
-  state.archivoBase64 = null; // en producción vendría del Worker
-  await ejecutarPipeline(true);
-}
 
+  try {
+    const res = await fetch(`${WORKER_URL}/drive/download?id=${id}`, {
+      headers: { 'Authorization': `Bearer ${state.googleToken}` }
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      toast('Error descargando archivo: ' + data.error);
+      return;
+    }
+
+    state.archivoActual = nombre;
+    state.archivoBase64 = data.base64;
+    state.archivoTipo = data.mimeType || mimeType;
+
+    log(`Drive: archivo descargado ✓`, 'success');
+    await ejecutarPipeline(true);
+
+  } catch(e) {
+    toast('Error: ' + e.message);
+    log('Drive: error al descargar — ' + e.message, 'error');
+  }
+}
 // ============================================================
 // MANEJO DE ARCHIVOS
 // ============================================================
