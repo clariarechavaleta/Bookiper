@@ -1159,31 +1159,41 @@ function cerrarSesion() {
 // ============================================================
 // GOOGLE DRIVE
 // ============================================================
-function cargarDrive() {
-  if (!state.user) return;
-  // En producción: llamar al Worker que usa Google Drive API
-  // Demo: mostramos archivos simulados
-  const archivosDemo = [
-    { id: '1', nombre: 'ticket_tienda_inglesa_mayo.jpg', fecha: '01/06/2026', tipo: 'image/jpeg' },
-    { id: '2', nombre: 'factura_ancap_junio.pdf', fecha: '03/06/2026', tipo: 'application/pdf' },
-    { id: '3', nombre: 'recibo_uber_06jun.png', fecha: '06/06/2026', tipo: 'image/png' },
-  ];
+async function cargarDrive() {
+  if (!state.user || !state.googleToken) return;
 
-  const lista = document.getElementById('driveFilesList');
-  lista.innerHTML = archivosDemo.map(f => `
-    <div class="drive-file">
-      <div class="drive-file-name">
-        <span>${f.tipo.includes('pdf') ? '📄' : '🖼️'}</span>
-        <span>${f.nombre}</span>
-        <span style="color:var(--gris-medio); font-size:11px;">${f.fecha}</span>
+  log('Google Drive: buscando carpeta Bookiper/...', 'info');
+
+  try {
+    const res = await fetch(`${WORKER_URL}/drive/files`, {
+      headers: { 'Authorization': `Bearer ${state.googleToken}` }
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      log(`Google Drive: ${data.error}`, 'warn');
+      return;
+    }
+
+    const lista = document.getElementById('driveFilesList');
+    lista.innerHTML = data.files.map(f => `
+      <div class="drive-file">
+        <div class="drive-file-name">
+          <span>${f.mimeType.includes('pdf') ? '📄' : '🖼️'}</span>
+          <span>${f.name}</span>
+          <span style="color:var(--gris-medio); font-size:11px;">${new Date(f.modifiedTime).toLocaleDateString('es-UY')}</span>
+        </div>
+        <button class="btn-process-drive" onclick="procesarDesdeDrive('${f.id}', '${f.name}', '${f.mimeType}')">Procesar</button>
       </div>
-      <button class="btn-process-drive" onclick="procesarDesdeDrive('${f.id}', '${f.nombre}')">Procesar</button>
-    </div>
-  `).join('');
+    `).join('');
 
-  document.getElementById('driveEmpty').style.display = 'none';
-  document.getElementById('driveFiles').style.display = 'block';
-  log('Google Drive: carpeta Bookiper/ sincronizada', 'success');
+    document.getElementById('driveEmpty').style.display = 'none';
+    document.getElementById('driveFiles').style.display = 'block';
+    log(`Google Drive: ${data.files.length} archivos encontrados en carpeta Bookiper/`, 'success');
+
+  } catch(e) {
+    log('Google Drive: error al cargar — ' + e.message, 'error');
+  }
 }
 
 function refreshDrive() {
