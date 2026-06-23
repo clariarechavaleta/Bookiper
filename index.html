@@ -1170,18 +1170,22 @@ async function cargarDrive() {
     });
     const data = await res.json();
 
-    if (data.error) {
-     log(`Google Drive respuesta: ${JSON.stringify(data)}`, 'warn');;
+    log(`Google Drive respuesta: ${JSON.stringify(data)}`, 'info');
+
+    const files = data.files || [];
+
+    if (files.length === 0) {
+      log('Google Drive: no se encontraron archivos', 'warn');
       return;
     }
 
     const lista = document.getElementById('driveFilesList');
-    lista.innerHTML = data.files.map(f => `
+    lista.innerHTML = files.map(f => `
       <div class="drive-file">
         <div class="drive-file-name">
-          <span>${f.mimeType.includes('pdf') ? '📄' : '🖼️'}</span>
+          <span>${f.mimeType && f.mimeType.includes('pdf') ? '📄' : '🖼️'}</span>
           <span>${f.name}</span>
-          <span style="color:var(--gris-medio); font-size:11px;">${new Date(f.modifiedTime).toLocaleDateString('es-UY')}</span>
+          <span style="color:var(--gris-medio); font-size:11px;">${f.modifiedTime ? new Date(f.modifiedTime).toLocaleDateString('es-UY') : ''}</span>
         </div>
         <button class="btn-process-drive" onclick="procesarDesdeDrive('${f.id}', '${f.name}', '${f.mimeType}')">Procesar</button>
       </div>
@@ -1189,7 +1193,7 @@ async function cargarDrive() {
 
     document.getElementById('driveEmpty').style.display = 'none';
     document.getElementById('driveFiles').style.display = 'block';
-    log(`Google Drive: ${data.files.length} archivos encontrados en carpeta Bookiper/`, 'success');
+    log(`Google Drive: ${files.length} archivos encontrados`, 'success');
 
   } catch(e) {
     log('Google Drive: error al cargar — ' + e.message, 'error');
