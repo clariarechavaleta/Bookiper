@@ -1171,7 +1171,7 @@ async function cargarDrive() {
     const data = await res.json();
 
     if (data.error) {
-      log(`Google Drive: ${data.error}`, 'warn');
+     log(`Google Drive respuesta: ${JSON.stringify(data)}`, 'warn');;
       return;
     }
 
