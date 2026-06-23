@@ -1411,7 +1411,13 @@ Si algo no está claro, ponelo en notas. Confianza 1.0 = certeza total.`;
 
   return { model: 'claude-sonnet-4-6', max_tokens: 800, messages: [{ role: 'user', content }] };
 }
-
+function sanitizar(texto) {
+  if (!texto) return '?';
+  return String(texto)
+    .replace(/ignorá|ignore|olvida|forget|instrucciones|instructions|system|prompt/gi, '***')
+    .substring(0, 200);
+}
+  
 function buildClassifyPayload(payload) {
   const ext = payload.extraccion;
   const prompt = `Sos el Agente Clasificador de Bookiper para PyMEs uruguayas.
@@ -1424,9 +1430,9 @@ Clasificá este gasto en categoría contable. Contexto uruguayo:
 - Servicios: UTE, Antel, OSE
 
 Datos del comprobante:
-Proveedor: ${ext.proveedor || '?'}
-Monto: ${ext.moneda || 'UYU'} ${ext.monto || '?'}
-Descripción: ${ext.descripcion || '?'}
+Proveedor: ${sanitizar(ext.proveedor)}
+Monto: ${ext.moneda || 'UYU'} ${sanitizar(String(ext.monto))}
+Descripción: ${sanitizar(ext.descripcion)}
 Tipo: ${ext.tipo || '?'}
 
 Respondé SOLO con JSON:
