@@ -1353,6 +1353,11 @@ async function ejecutarPipeline(desdeDrive = false) {
     });
     log('Extractor: respuesta recibida ✓', 'success');
   } catch(e) {
+    state.erroresConsecutivos++;
+    if (state.erroresConsecutivos >= 2) {
+      log('🔴 ALERTA: API de Anthropic con error en dos llamadas consecutivas. Verificá el estado del servicio.', 'error');
+      toast('🔴 Alerta crítica: API no responde');
+    }
     log('Extractor: error — ' + e.message, 'error');
     setPipelineStep('extraccion', 'error');
     finalizarConError('No se pudo procesar la imagen. Verificá la conexión.');
