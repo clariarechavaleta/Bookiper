@@ -1515,15 +1515,15 @@ Estado: aprobado si confianza >= 0.80, revision si 0.60-0.79, escalado si < 0.60
 function buildReconcilePayload(payload) {
   const prompt = `Sos el Agente Reconciliador de Bookiper para PyMEs uruguayas.
 Cruzá estos comprobantes contra el extracto bancario Itaú Uruguay.
+El banco abrevia nombres de proveedores — hacé matching por monto y fecha aproximada.
 
 COMPROBANTES:
 ${JSON.stringify(payload.comprobantes.map(c => ({
   proveedor: c.extraccion?.proveedor,
   monto: c.extraccion?.monto,
-  fecha: c.extraccion?.fecha
+  fecha: c.extraccion?.fecha,
+  moneda: c.extraccion?.moneda
 })), null, 2)}
-
-EXTRACTO: ${payload.extracto}
 
 Respondé SOLO con JSON:
 {
@@ -1531,7 +1531,24 @@ Respondé SOLO con JSON:
   "resumen": { "match_exacto": N, "match_monto": N, "sin_match": N }
 }`;
 
-  return { model: 'claude-sonnet-4-6', max_tokens: 2000, messages };
+  return {
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2000,
+    messages: [{
+      role: 'user',
+      content: [
+        {
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: 'image/jpeg',
+            data: payload.extractoPDF
+          }
+        },
+        { type: 'text', text: prompt }
+      ]
+    }]
+  };
 }
 
 // ============================================================
