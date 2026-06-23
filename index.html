@@ -1531,7 +1531,7 @@ Respondé SOLO con JSON:
   "resumen": { "match_exacto": N, "match_monto": N, "sin_match": N }
 }`;
 
-  return { model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] };
+  return { model: 'claude-sonnet-4-6', max_tokens: 2000, messages };
 }
 
 // ============================================================
