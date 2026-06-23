@@ -1726,24 +1726,29 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ============================================================
 // INIT
 // ============================================================
-window.onload = () => {
+window.onload = async () => {
   log('Bookiper iniciado · sistema agéntico contable v2.0', 'success');
   log('Backend: Cloudflare Worker · DB: Supabase · Auth: Google OAuth', 'info');
   actualizarMonitoreo();
 
-  // Verificar si volvemos del callback de Google OAuth
-  const sessionCookie = document.cookie
-  .split('; ')
-  .find(r => r.startsWith('session='));
-
-if (sessionCookie) {
-  const sessionData = JSON.parse(decodeURIComponent(sessionCookie.split('=')[1]));
-  state.user = { email: sessionData.email, nombre: sessionData.nombre };
-  actualizarAuthUI();
-  log('Usuario autenticado correctamente', 'success');
-  toast('✓ Sesión iniciada con Google');
-  cargarDrive();
-}
+  // Verificar sesión activa con el Worker
+  try {
+    const res = await fetch(`${WORKER_URL}/auth/me`, {
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (data.user) {
+      state.user = data.user;
+      state.googleToken = data.user.googleToken;
+      actualizarAuthUI();
+      log('Sesión restaurada correctamente', 'success');
+      toast('✓ Sesión iniciada con Google');
+      cargarDrive();
+    }
+  } catch(e) {
+    log('Sin sesión activa', 'info');
+  }
+};
 
 };
 </script>
