@@ -1731,22 +1731,19 @@ window.onload = async () => {
   log('Backend: Cloudflare Worker · DB: Supabase · Auth: Google OAuth', 'info');
   actualizarMonitoreo();
 
-  // Verificar sesión activa con el Worker
-  try {
-    const res = await fetch(`${WORKER_URL}/auth/me`, {
-      credentials: 'include'
-    });
-    const data = await res.json();
-    if (data.user) {
-      state.user = data.user;
-      state.googleToken = data.user.googleToken;
-      actualizarAuthUI();
-      log('Sesión restaurada correctamente', 'success');
-      toast('✓ Sesión iniciada con Google');
-      cargarDrive();
-    }
-  } catch(e) {
-    log('Sin sesión activa', 'info');
+  const params = new URLSearchParams(window.location.search);
+  const email = params.get('email');
+  const nombre = params.get('nombre');
+  const token = params.get('token');
+
+  if (email && token) {
+    state.user = { email, nombre };
+    state.googleToken = token;
+    actualizarAuthUI();
+    log('Sesión restaurada correctamente', 'success');
+    toast('✓ Sesión iniciada con Google');
+    cargarDrive();
+    window.history.replaceState({}, document.title, window.location.pathname);
   }
 };
 
