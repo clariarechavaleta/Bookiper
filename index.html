@@ -1352,6 +1352,7 @@ async function ejecutarPipeline(desdeDrive = false) {
       nombre: typeof state.archivoActual === 'string' ? state.archivoActual : state.archivoActual?.name
     });
     log('Extractor: respuesta recibida ✓', 'success');
+    state.erroresConsecutivos = 0;
   } catch(e) {
     state.erroresConsecutivos++;
     if (state.erroresConsecutivos >= 2) {
