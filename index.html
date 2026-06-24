@@ -1144,7 +1144,7 @@ function actualizarAuthUI() {
 }
 async function verificarRolUsuario() {
   try {
-    const res = await fetch(`${WORKER_URL}/usuario/rol?email=${encodeURIComponent(state.user.email)}`);
+    const res = await fetch(`${WORKER_URL}/usuario/rol?email=${state.user.email}`);
     const data = await res.json();
     
     if (data.error) {
