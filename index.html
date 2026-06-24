@@ -1137,7 +1137,36 @@ function actualizarAuthUI() {
       </div>`;
     document.getElementById('statusDrive').textContent = `Conectado como ${state.user.email}`;
     document.getElementById('dotDrive').style.background = 'var(--verde-medio)';
+    verificarRolUsuario();
+  }
+}
+async function verificarRolUsuario() {
+  try {
+    const res = await fetch(`${WORKER_URL}/usuario/rol?email=${encodeURIComponent(state.user.email)}`);
+    const data = await res.json();
+    
+    if (data.error) {
+      toast('❌ Tu cuenta no está registrada en Bookiper. Contactá al administrador.');
+      cerrarSesion();
+      return;
+    }
+
+    state.user.rol = data.rol;
+    state.user.empresa = data.empresa;
+    state.user.contadorEmail = data.contador_email;
+
+    log(`Rol: ${data.rol} · Empresa: ${data.empresa}`, 'info');
+
+    if (data.rol === 'empleado') {
+      document.querySelector('[onclick="switchMainTab(\'conciliar\', this)"]').style.display = 'none';
+      document.querySelector('[onclick="switchMainTab(\'reporte\', this)"]').style.display = 'none';
+    }
+
     cargarComprobantesGuardados();
+    cargarDrive();
+
+  } catch(e) {
+    log('Error verificando rol: ' + e.message, 'error');
   }
 }
 async function cargarComprobantesGuardados() {
