@@ -1152,7 +1152,7 @@ async function cargarComprobantesGuardados() {
         state.comprobantes.push({
           id: c.id,
           nombre: c.proveedor || 'Comprobante',
-          extraccion: { proveedor: c.proveedor, monto: c.monto, moneda: c.moneda },
+          extraccion: { proveedor: c.proveedor, monto: c.monto, moneda: c.moneda, fecha: c.fecha },
           clasificacion: { categoria: c.categoria, estado: c.estado },
           latencia: c.latencia,
           timestamp: c.timestamp
