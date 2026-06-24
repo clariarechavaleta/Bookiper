@@ -1778,7 +1778,71 @@ function actualizarReporte() {
   const fecha = new Date().toLocaleDateString('es-UY');
   let csv = `Reporte Bookiper - ${fecha}\n\n`;
   csv += `Proveedor,Monto,Moneda,Categoría,Estado,Fecha\n`;
+
+  function exportarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
   
+  const fecha = new Date().toLocaleDateString('es-UY');
+  const empresa = state.user?.empresa || 'Bookiper Demo';
+  
+  doc.setFontSize(18);
+  doc.setTextColor(26, 122, 74);
+  doc.text('Bookiper', 14, 20);
+  
+  doc.setFontSize(11);
+  doc.setTextColor(100);
+  doc.text(`Reporte de gastos — ${empresa}`, 14, 28);
+  doc.text(`Generado: ${fecha}`, 14, 34);
+  
+  doc.setDrawColor(229, 231, 235);
+  doc.line(14, 38, 196, 38);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(50);
+  
+  let y = 46;
+  const cats = {};
+  state.comprobantes.forEach(c => {
+    const cat = c.clasificacion?.categoria || 'Sin clasificar';
+    const monto = c.extraccion?.monto || 0;
+    cats[cat] = (cats[cat] || 0) + monto;
+  });
+
+  doc.setFontSize(11);
+  doc.setTextColor(26, 122, 74);
+  doc.text('Resumen por categoría', 14, y);
+  y += 8;
+
+  doc.setFontSize(10);
+  doc.setTextColor(50);
+  Object.entries(cats).forEach(([cat, monto]) => {
+    doc.text(cat, 14, y);
+    doc.text(`$${monto.toLocaleString('es-UY', {minimumFractionDigits:2})} UYU`, 140, y);
+    y += 7;
+  });
+
+  const total = Object.values(cats).reduce((a,b) => a+b, 0);
+  y += 3;
+  doc.line(14, y, 196, y);
+  y += 6;
+  doc.setFontSize(11);
+  doc.setTextColor(26, 122, 74);
+  doc.text('Total gastos procesados', 14, y);
+  doc.text(`$${total.toLocaleString('es-UY', {minimumFractionDigits:2})} UYU`, 140, y);
+
+  y += 12;
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  const aprobados = state.comprobantes.filter(c => c.clasificacion?.estado === 'aprobado').length;
+  const revision = state.comprobantes.filter(c => c.clasificacion?.estado !== 'aprobado').length;
+  doc.text(`✓ ${aprobados} aprobados    ⚠ ${revision} requieren revisión`, 14, y);
+
+  doc.save(`bookiper_reporte_${fecha.replace(/\//g,'-')}.pdf`);
+  log('Reporte exportado a PDF ✓', 'success');
+  toast('✓ PDF descargado');
+}
+    
   state.comprobantes.forEach(c => {
     const proveedor = c.extraccion?.proveedor || '—';
     const monto = c.extraccion?.monto || 0;
