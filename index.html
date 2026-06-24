@@ -1981,7 +1981,6 @@ window.onload = async () => {
     actualizarAuthUI();
     log('Sesión restaurada correctamente', 'success');
     toast('✓ Sesión iniciada con Google');
-    cargarDrive();
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 };
