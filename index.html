@@ -1736,7 +1736,36 @@ function actualizarReporte() {
       <div class="reporte-tag" style="color:var(--verde)">✓ ${aprobados} aprobados</div>
       <div class="reporte-tag" style="color:var(--amarillo)">⚠️ ${revision} requieren revisión</div>
     </div>
+    <button class="btn-secondary" onclick="exportarExcel()" style="margin-top:12px;">📊 Exportar reporte a Excel</button>
+
   `;
+}
+  function exportarExcel() {
+  const fecha = new Date().toLocaleDateString('es-UY');
+  let csv = `Reporte Bookiper - ${fecha}\n\n`;
+  csv += `Proveedor,Monto,Moneda,Categoría,Estado,Fecha\n`;
+  
+  state.comprobantes.forEach(c => {
+    const proveedor = c.extraccion?.proveedor || '—';
+    const monto = c.extraccion?.monto || 0;
+    const moneda = c.extraccion?.moneda || 'UYU';
+    const categoria = c.clasificacion?.categoria || '—';
+    const estado = c.clasificacion?.estado || '—';
+    const fechaComp = c.extraccion?.fecha || '—';
+    csv += `"${proveedor}","${monto}","${moneda}","${categoria}","${estado}","${fechaComp}"\n`;
+  });
+
+  csv += `\nTotal,${state.comprobantes.reduce((a,c) => a + (c.extraccion?.monto || 0), 0)},,,,\n`;
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bookiper_reporte_${fecha.replace(/\//g,'-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  log('Reporte exportado a Excel ✓', 'success');
+  toast('✓ Reporte descargado');
 }
 
 // ============================================================
