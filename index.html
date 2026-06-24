@@ -1876,6 +1876,24 @@ function finalizarConError(msg) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+async function mandarAlertaEmail(tipo, mensaje) {
+  if (!state.user?.contadorEmail) return;
+  try {
+    await fetch(`${WORKER_URL}/alerta/email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tipo,
+        mensaje,
+        contadorEmail: state.user.contadorEmail,
+        empresa: state.user.empresa || 'Bookiper Demo'
+      })
+    });
+    log(`📧 Alerta enviada por email al contador`, 'info');
+  } catch(e) {
+    log('Error enviando alerta por email: ' + e.message, 'warn');
+  }
+}
 // ============================================================
 // INIT
 // ============================================================
