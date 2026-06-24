@@ -1768,8 +1768,10 @@ function actualizarReporte() {
       <div class="reporte-tag" style="color:var(--verde)">✓ ${aprobados} aprobados</div>
       <div class="reporte-tag" style="color:var(--amarillo)">⚠️ ${revision} requieren revisión</div>
     </div>
-    <button class="btn-secondary" onclick="exportarExcel()" style="margin-top:12px;">📊 Exportar reporte a Excel</button>
-
+    <div style="display:flex; gap:8px; margin-top:12px;">
+  <button class="btn-secondary" onclick="exportarExcel()" style="margin-top:0;">📊 Exportar a Excel</button>
+  <button class="btn-secondary" onclick="exportarPDF()" style="margin-top:0;">📄 Exportar a PDF</button>
+  </div>
   `;
 }
   function exportarExcel() {
