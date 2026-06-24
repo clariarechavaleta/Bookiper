@@ -1174,7 +1174,11 @@ async function verificarRolUsuario() {
 }
 async function cargarComprobantesGuardados() {
   try {
-    const res = await fetch(`${WORKER_URL}/comprobantes?usuario=${encodeURIComponent(state.user.email)}`);
+    const esContador = state.user.rol === 'contador';
+    const urlComprobantes = esContador 
+      ? `${WORKER_URL}/comprobantes?usuario=${state.user.email}&empresa=${encodeURIComponent(state.user.empresa)}`
+      : `${WORKER_URL}/comprobantes?usuario=${state.user.email}`;
+    const res = await fetch(urlComprobantes);
     const data = await res.json();
     if (!data.length) return;
 
