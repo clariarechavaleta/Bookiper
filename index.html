@@ -1565,7 +1565,7 @@ async function guardarEnSupabase(comp) {
         estado: comp.clasificacion?.estado,
         latencia: parseFloat(comp.latencia),
         usuario: state.user?.email,
-        timestamp: comp.timestamp
+        timestamp: comp.timestamp,
         fecha: comp.extraccion?.fecha    
       }})
     });
