@@ -1817,15 +1817,15 @@ function actualizarMonitoreo() {
   document.getElementById('countNum').textContent = total;
 
   // Alerta amarilla: más del 20% de comprobantes con confianza baja
-  if (total >= 3) {
-    const bajaConfianza = state.comprobantes.filter(c => {
+  const conSesion = state.comprobantes.filter(c => c.extraccion?.confianza);
+  if (conSesion.length >= 3) {
+    const bajaConfianza = conSesion.filter(c => {
       const conf = c.extraccion?.confianza;
-      if (!conf) return false;
       const valores = Object.values(conf).filter(v => typeof v === 'number');
       return valores.length > 0 && Math.min(...valores) < 0.80;
     }).length;
 
-    const pctBaja = Math.round(bajaConfianza / total * 100);
+    const pctBaja = Math.round(bajaConfianza / conSesion.length * 100);
     if (pctBaja > 20) {
       log(`⚠️ ALERTA: ${pctBaja}% de los comprobantes tienen confianza baja — revisá la calidad de las imágenes.`, 'warn');
       toast('⚠️ Alerta: imágenes con baja confianza de extracción');
