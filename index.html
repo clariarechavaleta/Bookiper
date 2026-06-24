@@ -1828,6 +1828,7 @@ function actualizarMonitoreo() {
     if (pctBaja > 20) {
       log(`⚠️ ALERTA: ${pctBaja}% de los comprobantes tienen confianza baja — revisá la calidad de las imágenes.`, 'warn');
       toast('⚠️ Alerta: imágenes con baja confianza de extracción');
+      mandarAlertaEmail('Confianza baja', `${pctBaja}% de los comprobantes tienen confianza de extracción menor a 0.80`);
     }
   }
 }
